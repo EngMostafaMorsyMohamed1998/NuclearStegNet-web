@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NuclearStegNet — Hidden-data detection for robot telemetry</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<script>/* default language: English; Arabic only if explicitly chosen (key nsn_lang_v2) */try{var L=(location.search.match(/[?&]lang=(ar|en)/)||[])[1]||localStorage.getItem('nsn_lang_v2')||'en';if(L==='ar'){document.documentElement.lang='ar';document.documentElement.dir='rtl';}}catch(e){}</script>
+<script src="static/i18n.js"></script>
+<script>(function(){var d=window.I18N&&I18N.dict;if(!d)return;
+d.en['static.note']='Static build (GitHub Pages): all analysis, telemetry and the mission simulation run locally in your browser — no image leaves your device. Dashboard metrics are simulated reference values.';
+d.ar['static.note']='نسخة ثابتة (GitHub Pages): كل التحليل والقياسات ومحاكاة المهمة تعمل محلياً في متصفحك — لا تغادر أي صورة جهازك. مقاييس لوحة التحكم قيم مرجعية محاكاة.';})();</script>
+<link rel="icon" href="data:,"><style>body{padding-bottom:30px}</style>
+<script src="static/calibration.js"></script>
+<script src="static/sim.js"></script>
+<style>html[lang=ar] body{font-family:'Cairo',ui-sans-serif,system-ui,sans-serif}html[lang=ar] .mono{font-family:ui-monospace,SFMono-Regular,Menlo,'Cairo',monospace}</style>
+<style>
+body{font-family:ui-sans-serif,system-ui,Inter,sans-serif}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.card{background:#0f172a;border:1px solid #1e293b;border-radius:.75rem}
+.arrow{color:#475569;font-size:1.5rem}
+html[dir=rtl] .arrow{transform:scaleX(-1)}
+@media (max-width:767px){.arrow{transform:rotate(90deg)!important}}
+</style>
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen">
+<header class="border-b border-slate-800 bg-slate-900/80">
+  <div class="max-w-6xl mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-amber-500/20 border border-amber-500/50 flex items-center justify-center text-amber-400 text-xl">☢</div>
+      <div><h1 class="text-xl font-semibold tracking-tight">NuclearStegNet</h1>
+      <p class="text-xs text-slate-400" data-i18n="app.sub">Image Steganalysis for Robotic Telemetry · SRM + SE-Attention Simulator</p></div>
+    </div>
+    <nav class="flex items-center gap-2 text-sm">
+  <a href="./" class="px-3 py-1.5 rounded-md bg-sky-600 text-white" data-i18n="nav.home">Home</a>
+  <a href="analyze.html" class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700" data-i18n="nav.analyze">Analyze</a>
+  <a href="mission.html" class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700" data-i18n="nav.mission">Mission</a>
+  <button type="button" class="lang-btn px-3 py-1.5 rounded-md border border-amber-500/50 text-amber-300 hover:bg-amber-500/10 font-semibold" title="AR / EN">عربي</button>
+</nav>
+  </div>
+</header>
+<main class="max-w-6xl mx-auto px-6 py-10 space-y-10">
+  <section class="text-center space-y-5">
+    <p class="text-xs uppercase tracking-widest text-amber-400" data-i18n="i.kicker">Master's thesis demo · Securing inspection-robot telemetry</p>
+    <h2 class="text-3xl md:text-4xl font-bold" data-i18n="i.h1">Detecting hidden data in robot telemetry images</h2>
+    <p class="max-w-3xl mx-auto text-slate-300 leading-relaxed" data-i18n="i.lead"></p>
+    <div class="flex flex-wrap justify-center gap-4 pt-2">
+      <a id="ctaMission" href="mission.html" class="px-8 py-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-lg font-semibold shadow-lg shadow-sky-900/40" data-i18n="i.start">▶ Start Mission Simulation</a>
+      <a id="ctaAnalyze" href="analyze.html" class="px-8 py-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-lg font-semibold" data-i18n="i.analyze">🔬 Analyze an Image</a>
+    </div>
+  </section>
+
+  <section class="grid md:grid-cols-2 gap-6">
+    <div class="card p-6"><h3 class="font-semibold text-amber-300 mb-2" data-i18n="i.probT">The problem</h3><p class="text-sm text-slate-300 leading-relaxed" data-i18n="i.prob"></p></div>
+    <div class="card p-6"><h3 class="font-semibold text-sky-300 mb-2" data-i18n="i.simT">What happens in the simulation</h3><p class="text-sm text-slate-300 leading-relaxed" data-i18n="i.sim"></p></div>
+  </section>
+
+  <section class="card p-6">
+    <h3 class="font-semibold mb-5" data-i18n="i.pipeT">Detection pipeline</h3>
+    <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2 text-center">
+      <div class="flex-1 rounded-lg border border-emerald-500/50 bg-emerald-500/10 p-3"><div class="text-2xl">🤖</div><div class="font-semibold text-sm" data-i18n="p.robot">Robot frame</div><div class="text-[11px] text-slate-400" data-i18n="p.robotS"></div></div>
+      <div class="arrow">➜</div>
+      <div class="flex-1 rounded-lg border border-sky-500/50 bg-sky-500/10 p-3"><div class="text-2xl">🔐</div><div class="font-semibold text-sm" data-i18n="p.aes">AES-256-GCM</div><div class="text-[11px] text-slate-400" data-i18n="p.aesS"></div></div>
+      <div class="arrow">➜</div>
+      <div class="flex-1 rounded-lg border border-cyan-500/50 bg-cyan-500/10 p-3"><div class="text-2xl">⚡</div><div class="font-semibold text-sm" data-i18n="p.edge">Edge anomaly</div><div class="text-[11px] text-slate-400" data-i18n="p.edgeS"></div></div>
+      <div class="arrow">➜</div>
+      <div class="flex-1 rounded-lg border border-violet-500/50 bg-violet-500/10 p-3"><div class="text-2xl">🔬</div><div class="font-semibold text-sm" data-i18n="p.steg">Steganalysis</div><div class="text-[11px] text-slate-400" data-i18n="p.stegS"></div></div>
+      <div class="arrow">➜</div>
+      <div class="flex-1 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3"><div class="text-2xl">📈</div><div class="font-semibold text-sm" data-i18n="p.beh">Behaviour</div><div class="text-[11px] text-slate-400" data-i18n="p.behS"></div></div>
+    </div>
+  </section>
+
+  <section class="grid md:grid-cols-2 gap-6">
+    <div class="card p-6"><h3 class="font-semibold mb-3" data-i18n="i.seeT">What you will see</h3>
+      <ul class="space-y-2 text-sm text-slate-300 list-disc ps-5">
+        <li data-i18n="i.see1"></li><li data-i18n="i.see2"></li><li data-i18n="i.see3"></li>
+        <li data-i18n="i.see4"></li><li data-i18n="i.see5"></li><li data-i18n="i.see6"></li></ul></div>
+    <div class="card p-6"><h3 class="font-semibold mb-3" data-i18n="i.doT">What you can do</h3>
+      <ul class="space-y-2 text-sm text-slate-300 list-disc ps-5">
+        <li data-i18n="i.do1"></li><li data-i18n="i.do2"></li><li data-i18n="i.do3"></li><li data-i18n="i.do4"></li><li data-i18n="i.do5"></li></ul></div>
+  </section>
+
+  <section class="text-sm text-amber-200/90 bg-amber-500/5 border border-amber-500/30 rounded-xl p-5">
+    <h3 class="font-semibold mb-1" data-i18n="i.honestT">Honest note</h3>
+    <p class="leading-relaxed" data-i18n="i.honest"></p>
+  </section>
+  <p class="text-center text-xs text-slate-500" data-i18n="i.footer">Academic research demo — hidden-data detection only.</p>
+</main>
+<div class="fixed bottom-0 inset-x-0 z-40 text-center text-[11px] text-slate-400 bg-slate-950/85 border-t border-slate-800 py-1 px-2 pointer-events-none" data-i18n="static.note"></div>
+</body>
+</html>

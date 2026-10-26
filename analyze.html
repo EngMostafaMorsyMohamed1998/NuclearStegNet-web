@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NuclearStegNet — Image Steganalysis for Robotic Telemetry</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<script>/* default language: English; Arabic only if explicitly chosen (key nsn_lang_v2) */try{var L=(location.search.match(/[?&]lang=(ar|en)/)||[])[1]||localStorage.getItem('nsn_lang_v2')||'en';if(L==='ar'){document.documentElement.lang='ar';document.documentElement.dir='rtl';}}catch(e){}</script>
+<script src="static/i18n.js"></script>
+<script>(function(){var d=window.I18N&&I18N.dict;if(!d)return;
+d.en['static.note']='Static build (GitHub Pages): all analysis, telemetry and the mission simulation run locally in your browser — no image leaves your device. Dashboard metrics are simulated reference values.';
+d.ar['static.note']='نسخة ثابتة (GitHub Pages): كل التحليل والقياسات ومحاكاة المهمة تعمل محلياً في متصفحك — لا تغادر أي صورة جهازك. مقاييس لوحة التحكم قيم مرجعية محاكاة.';})();</script>
+<link rel="icon" href="data:,"><style>body{padding-bottom:30px}</style>
+<script src="static/calibration.js"></script>
+<script src="static/sim.js"></script>
+<style>html[lang=ar] body{font-family:'Cairo',ui-sans-serif,system-ui,sans-serif}html[lang=ar] .mono{font-family:ui-monospace,SFMono-Regular,Menlo,'Cairo',monospace}</style>
+<style>
+body{font-family:ui-sans-serif,system-ui,Inter,sans-serif}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.card{background:#0f172a;border:1px solid #1e293b;border-radius:.75rem}
+.spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+#log::-webkit-scrollbar{width:6px}#log::-webkit-scrollbar-thumb{background:#334155}
+</style>
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen">
+<header class="border-b border-slate-800 bg-slate-900/80">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-amber-500/20 border border-amber-500/50 flex items-center justify-center text-amber-400 text-xl">☢</div>
+      <div><h1 class="text-xl font-semibold tracking-tight">NuclearStegNet</h1>
+      <p class="text-xs text-slate-400" data-i18n="app.sub">Image Steganalysis for Robotic Telemetry · SRM + SE-Attention Simulator</p></div>
+    </div>
+    <div class="flex items-center gap-4 text-xs mono">
+      <nav class="flex items-center gap-2 text-sm">
+  <a href="./" class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700" data-i18n="nav.home">Home</a>
+  <a href="analyze.html" class="px-3 py-1.5 rounded-md bg-sky-600 text-white" data-i18n="nav.analyze">Analyze</a>
+  <a href="mission.html" class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700" data-i18n="nav.mission">Mission</a>
+  <button type="button" class="lang-btn px-3 py-1.5 rounded-md border border-amber-500/50 text-amber-300 hover:bg-amber-500/10 font-semibold" title="AR / EN">عربي</button>
+</nav>
+      <span id="sysStatus" class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-slate-500"></span><span data-i18n="st.connecting">CONNECTING</span></span>
+      <span id="clock" class="text-slate-400"></span>
+    </div>
+  </div>
+</header>
+<main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+  <div class="text-xs text-amber-300/80 bg-amber-500/5 border border-amber-500/20 rounded-lg px-4 py-2" data-i18n="an.banner">
+    Research simulator: the detector uses fixed SRM filters with <b>untrained, fixed weights</b>. Balanced accuracy / TPR / FPR / ROC are <b>simulated reference benchmarks</b>, not measured results.
+  </div>
+  <section class="grid lg:grid-cols-3 gap-6">
+    <div class="card p-5 lg:col-span-2">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold" data-i18n="an.upload">1 · Telemetry Frame Upload</h2>
+        <div class="flex bg-slate-800 rounded-lg p-1 text-xs" id="sensorToggle">
+          <button data-s="optical" class="px-3 py-1 rounded-md bg-sky-600 text-white" data-i18n="an.optical">Optical</button>
+          <button data-s="thermal" class="px-3 py-1 rounded-md text-slate-300" data-i18n="an.thermal">Thermal / IR</button>
+        </div>
+      </div>
+      <label id="drop" for="file" class="flex flex-col items-center justify-center border-2 border-dashed border-slate-700 rounded-lg h-56 cursor-pointer hover:border-sky-500 transition overflow-hidden">
+        <div id="dropHint" class="text-center text-slate-400 text-sm"><div class="text-3xl mb-2">⇪</div><span data-i18n="an.drop">Drop image here or click to browse</span><br><span class="text-xs">PNG · JPG · BMP · TIFF</span></div>
+        <img id="preview" class="hidden max-h-full object-contain">
+      </label>
+      <input id="file" type="file" accept=".png,.jpg,.jpeg,.bmp,.tif,.tiff" class="hidden">
+      <p id="fileInfo" class="text-xs text-slate-500 mt-2 mono"></p>
+    </div>
+    <div class="card p-5 space-y-4">
+      <h2 class="font-semibold" data-i18n="an.config">2 · Configuration</h2>
+      <label class="block text-xs text-slate-400"><span data-i18n="an.alg">Embedding algorithm</span>
+        <select id="algorithm" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-md p-2 text-sm text-slate-100">
+          <option>J-UNIWARD</option><option selected>S-UNIWARD</option><option>WOW</option></select></label>
+      <label class="block text-xs text-slate-400"><span data-i18n="an.payload">Payload (bpp)</span>
+        <select id="payload" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-md p-2 text-sm text-slate-100">
+          <option value="0.1">0.1 bpp</option><option value="0.2">0.2 bpp</option><option value="0.4" selected>0.4 bpp</option></select></label>
+      <label class="block text-xs text-slate-400"><span data-i18n="an.domain">Evaluation domain</span>
+        <select id="domain" class="mt-1 w-full bg-slate-800 border border-slate-700 rounded-md p-2 text-sm text-slate-100">
+          <option value="matched" data-i18n="an.matched">Matched — optical (BOSSbase)</option><option value="cross" data-i18n="an.cross">Cross-sensor — thermal (HIT-UAV)</option></select></label>
+      <button id="run" disabled class="w-full py-2.5 rounded-md bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-400 font-medium flex items-center justify-center gap-2">
+        <span id="runSpin" class="hidden w-4 h-4 border-2 border-white/30 border-t-white rounded-full spin"></span><span id="runTxt" data-i18n="an.run">Run Analysis</span></button>
+      <p id="err" class="text-xs text-rose-400"></p>
+    </div>
+  </section>
+
+  <section class="grid lg:grid-cols-3 gap-6">
+    <div class="card p-5">
+      <h2 class="font-semibold mb-3" data-i18n="an.verdict">3 · Verdict</h2>
+      <div id="verdict" class="inline-block px-4 py-1.5 rounded-full text-lg font-bold bg-slate-800 text-slate-400">—</div>
+      <div class="mt-4 text-xs text-slate-400 flex justify-between"><span data-i18n="an.conf">Confidence</span><span id="confTxt" class="mono">—</span></div>
+      <div class="h-3 bg-slate-800 rounded-full mt-1 overflow-hidden"><div id="confBar" class="h-full w-0 bg-sky-500 transition-all duration-700"></div></div>
+      <div class="mt-3 text-xs text-slate-400 flex justify-between"><span>P(stego)</span><span id="pTxt" class="mono">—</span></div>
+      <button id="clearBtn" class="hidden mt-4 w-full py-2 rounded-md bg-emerald-700 hover:bg-emerald-600 text-white font-medium" data-i18n="an.clearBtn">🧹 Clear hidden data</button>
+      <div id="timings" class="mt-4 text-xs mono text-slate-500 space-y-0.5"></div>
+    </div>
+    <div class="card p-5 lg:col-span-2">
+      <h2 class="font-semibold mb-3"><span data-i18n="an.metrics">Metrics</span> <span class="text-xs font-normal text-amber-400/80" data-i18n="an.metricsNote">(Bal.Acc/TPR/FPR = simulated reference)</span></h2>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3" id="tiles"></div>
+      <div class="grid grid-cols-2 gap-4 mt-4">
+        <div><p class="text-xs text-slate-400 mb-1" data-i18n="an.orig">Original (grayscale input)</p><div class="bg-black rounded-md h-48 flex items-center justify-center overflow-hidden"><img id="origImg" class="max-h-full object-contain"></div></div>
+        <div><p class="text-xs text-slate-400 mb-1" data-i18n="an.res">SE-weighted SRM residual |R|</p><div class="bg-black rounded-md h-48 flex items-center justify-center overflow-hidden"><img id="resImg" class="max-h-full object-contain"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="clearSec" class="card p-5 hidden">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+      <h2 class="font-semibold" data-i18n="an.clearT">Detect & clear — before / after</h2>
+      <a id="dlClean" download="cleaned.png" class="px-3 py-1.5 rounded-md bg-sky-600 hover:bg-sky-500 text-white text-sm" data-i18n="an.download">⬇ Download cleaned image</a>
+    </div>
+    <p id="clearRes" class="text-sm mono text-emerald-300 mb-3"></p>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-slate-400">
+      <div><p class="mb-1" data-i18n="an.before">Before (input)</p><div class="bg-black rounded-md h-48 flex items-center justify-center overflow-hidden"><img id="clBefore" class="max-h-full object-contain" alt=""></div></div>
+      <div><p class="mb-1" data-i18n="an.after">After (cleaned)</p><div class="bg-black rounded-md h-48 flex items-center justify-center overflow-hidden"><img id="clAfter" class="max-h-full object-contain" alt=""></div></div>
+      <div><p class="mb-1" data-i18n="an.resBefore">Residual before</p><div class="bg-black rounded-md h-48 flex items-center justify-center overflow-hidden"><img id="clResB" class="max-h-full object-contain" alt=""></div></div>
+      <div><p class="mb-1" data-i18n="an.resAfter">Residual after</p><div class="bg-black rounded-md h-48 flex items-center justify-center overflow-hidden"><img id="clResA" class="max-h-full object-contain" alt=""></div></div>
+    </div>
+    <p id="clearNote" class="text-[11px] text-amber-300/80 mt-3"></p>
+  </section>
+
+  <section class="grid lg:grid-cols-2 gap-6">
+    <div class="card p-5"><h2 class="font-semibold mb-3"><span data-i18n="an.roc">ROC Curve</span> <span id="aucLbl" class="text-xs text-sky-400 mono ms-2"></span></h2><div class="h-72"><canvas id="roc"></canvas></div></div>
+    <div class="card p-5"><h2 class="font-semibold mb-3" data-i18n="an.se">SE Channel Attention per SRM Filter</h2><div class="h-72"><canvas id="se"></canvas></div></div>
+  </section>
+
+  <section class="card p-5">
+    <h2 class="font-semibold mb-4" data-i18n="an.defense">4 · Defense-in-Depth Monitor</h2>
+    <div class="grid md:grid-cols-4 gap-3 mb-4" id="layers"></div>
+    <div id="log" class="bg-black rounded-md p-3 h-64 overflow-y-auto mono text-xs leading-5 border border-slate-800"></div>
+  </section>
+</main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  let lastClear = null, lastD = null, lastPoll = null, events = [], file = null, sensor = 'optical', lastId = 0, rocChart = null, seChart = null;
+  setInterval(() => $('clock').textContent = new Date().toISOString().replace('T',' ').slice(0,19)+'Z', 1000);
+
+  document.querySelectorAll('#sensorToggle button').forEach(b => b.onclick = () => {
+    sensor = b.dataset.s;
+    document.querySelectorAll('#sensorToggle button').forEach(x => x.className = 'px-3 py-1 rounded-md ' + (x === b ? 'bg-sky-600 text-white' : 'text-slate-300'));
+    $('domain').value = sensor === 'thermal' ? 'cross' : 'matched';
+  });
+
+  function setFile(f) {
+    if (!f) return;
+    file = f; $('run').disabled = false; $('err').textContent = '';
+    $('fileInfo').textContent = `${f.name} · ${(f.size/1024).toFixed(1)} KB`;
+    const url = URL.createObjectURL(f);
+    $('preview').src = url; $('origImg').src = url;
+    $('preview').classList.remove('hidden'); $('dropHint').classList.add('hidden');
+  }
+  $('file').onchange = e => setFile(e.target.files[0]);
+  const drop = $('drop');
+  ['dragover','dragenter'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('border-sky-500'); }));
+  ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('border-sky-500'); }));
+  drop.addEventListener('drop', e => setFile(e.dataTransfer.files[0]));
+
+  function tile(label, val, sub) {
+    return `<div class="bg-slate-800/60 border border-slate-700 rounded-lg p-3"><div class="text-[10px] uppercase tracking-wider text-slate-400">${label}</div><div class="text-xl font-semibold mono mt-1">${val}</div><div class="text-[10px] text-slate-500">${sub}</div></div>`;
+  }
+  function renderTiles(d) {
+    const m = d && d.metrics, q = d && d.quality;
+    $('tiles').innerHTML = [
+      tile(t('an.balacc'), m ? (m.balanced_accuracy*100).toFixed(1)+'%' : '—', t('an.simref')),
+      tile('TPR', m ? (m.tpr*100).toFixed(1)+'%' : '—', t('an.simref')),
+      tile('FPR', m ? (m.fpr*100).toFixed(1)+'%' : '—', t('an.simref')),
+      tile('PSNR', q ? (isFinite(q.psnr_db) ? q.psnr_db.toFixed(2) : '∞')+' dB' : '—', t('an.coverStego')),
+      tile('SSIM', q ? q.ssim.toFixed(4) : '—', t('an.coverStego'))].join('');
+  }
+  renderTiles(null);
+
+  Chart.defaults.color = '#94a3b8'; Chart.defaults.borderColor = '#1e293b';
+  function drawCharts(d) {
+    const pts = d.roc.map(p => ({x: p.fpr, y: p.tpr}));
+    if (rocChart) rocChart.destroy();
+    rocChart = new Chart($('roc'), {type: 'line', data: {datasets: [
+      {label: `${d.config.algorithm} @ ${d.config.payload_bpp} bpp`, data: pts, borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,.12)', fill: true, pointRadius: 0, tension: .2},
+      {label: t('an.chance'), data: [{x:0,y:0},{x:1,y:1}], borderColor: '#64748b', borderDash: [6,6], pointRadius: 0},
+      {label: t('an.op'), data: [{x: d.metrics.fpr, y: d.metrics.tpr}], borderColor: '#f59e0b', backgroundColor: '#f59e0b', pointRadius: 5, showLine: false}]},
+      options: {maintainAspectRatio: false, animation: {duration: 500}, scales: {x: {type: 'linear', min: 0, max: 1, title: {display: true, text: 'FPR'}}, y: {min: 0, max: 1, title: {display: true, text: 'TPR'}}}}});
+    $('aucLbl').textContent = t('an.aucSim', {auc: d.metrics.auc.toFixed(3)});
+    if (seChart) seChart.destroy();
+    seChart = new Chart($('se'), {type: 'bar', data: {labels: d.se_attention.map(s => s.filter), datasets: [{label: t('an.seW'), data: d.se_attention.map(s => s.weight),
+      backgroundColor: d.se_attention.map(s => `rgba(245,158,11,${0.3 + 0.7*s.weight})`)}]},
+      options: {maintainAspectRatio: false, plugins: {legend: {display: false}}, scales: {y: {min: 0, max: 1}, x: {ticks: {font: {size: 9}, maxRotation: 70, minRotation: 70}}}}});
+  }
+
+  $('run').onclick = async () => {
+    if (!file) return;
+    $('run').disabled = true; $('runSpin').classList.remove('hidden'); $('runTxt').textContent = t('an.running'); $('err').textContent = '';
+    const fd = new FormData();
+    fd.append('image', file); fd.append('algorithm', $('algorithm').value); fd.append('payload', $('payload').value);
+    fd.append('domain', $('domain').value); fd.append('sensor', sensor);
+    try {
+      const r = await NSN.fetch('/api/analyze', {method: 'POST', body: fd});
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+      const stego = d.verdict === 'Stego';
+      $('verdict').textContent = t('v.' + d.verdict);
+      $('verdict').className = 'inline-block px-4 py-1.5 rounded-full text-lg font-bold ' + (stego ? 'bg-rose-500/20 text-rose-400 border border-rose-500/50' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50');
+      $('confBar').style.width = (d.confidence*100).toFixed(1) + '%';
+      $('confBar').className = 'h-full transition-all duration-700 ' + (stego ? 'bg-rose-500' : 'bg-emerald-500');
+      $('confTxt').textContent = (d.confidence*100).toFixed(1) + '%';
+      $('pTxt').textContent = d.p_stego.toFixed(4);
+      $('timings').innerHTML = Object.entries(d.timings_ms).map(([k,v]) => `<div class="flex justify-between"><span>${k}</span><span>${v.toFixed(1)}</span></div>`).join('');
+      $('resImg').src = d.residual_map;
+      lastD = d; lastClear = null; renderTiles(d); drawCharts(d);
+      $('clearSec').classList.add('hidden'); $('clearBtn').classList.toggle('hidden', !stego);
+    } catch (e) { $('err').textContent = t('an.err', {m: e.message}); }
+    finally { $('run').disabled = false; $('runSpin').classList.add('hidden'); $('runTxt').textContent = t('an.run'); }
+  };
+
+  const sevCls = {INFO: 'text-sky-400', WARN: 'text-amber-400', CRITICAL: 'text-rose-500 font-bold'};
+  const stCls = s => /ALERT|DEGRADED|DETECTED/.test(s) ? 'text-rose-400' : /ELEVATED/.test(s) ? 'text-amber-400' : /IDLE/.test(s) ? 'text-slate-400' : 'text-emerald-400';
+  function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  function layerCard(id, l, detail) {
+    return `<div class="bg-slate-800/50 border border-slate-700 rounded-lg p-3"><div class="text-[10px] text-slate-500 mono">${t('an.layer', {n: id.slice(1)})}</div><div class="text-sm font-medium">${esc(t('layer.' + id))}</div><div class="mono text-xs mt-1 ${stCls(l.status)}">● ${esc(t('ls.' + l.status))}</div><div class="text-[11px] text-slate-400 mono mt-1">${detail}</div></div>`;
+  }
+  async function poll() {
+    try {
+      const r = await NSN.fetch('/api/telemetry?after=' + lastId);
+      const d = await r.json(); const L = d.layers;
+      lastPoll = d; renderLayers(); addEvents(d);
+    } catch (e) {
+      $('sysStatus').innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500"></span><span class="text-rose-400">' + t('st.offline') + '</span>';
+    }
+  }
+  function renderLayers() {
+    const d = lastPoll; if (!d) return; const L = d.layers;
+    $('sysStatus').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span class="text-emerald-400">' + t('st.online') + '</span>';
+      $('layers').innerHTML =
+        layerCard('L1', L.L1, L.L1.tag ? `tag ${L.L1.tag.slice(0,12)}… · ${L.L1.latency_us}µs` : esc(L.L1.message || '')) +
+        layerCard('L2', L.L2, `${L.L2.latency_ms}ms · ${L.L2.gpu_temp_c}°C · a=${L.L2.anomaly_score}`) +
+        layerCard('L3', L.L3, L.L3.last ? `P=${L.L3.last.p_stego} · ${esc(L.L3.last.algorithm)}` : t('an.noAnalysis')) +
+        layerCard('L4', L.L4, t('an.profiling'));
+  }
+  function evHtml(e) {
+    const msg = e.key ? t(e.key, e.params) : e.message;
+    return `<span class="text-slate-600" dir="ltr">${e.ts.slice(11,23)}</span> <span class="text-violet-400">[${e.layer}]</span> <span class="${sevCls[e.severity]||''}">${t('sev.' + e.severity).padEnd(8,'\u00a0')}</span> <span class="text-slate-300">${esc(msg)}</span>`;
+  }
+  function renderLog() {
+    const log = $('log'); log.innerHTML = '';
+    events.forEach(e => { const div = document.createElement('div'); div.innerHTML = evHtml(e); log.appendChild(div); });
+    log.scrollTop = log.scrollHeight;
+  }
+  function renderClear() {
+    const c = lastClear; if (!c) return;
+    $('clearSec').classList.remove('hidden');
+    $('clBefore').src = c.original; $('clAfter').src = c.cleaned; $('clResB').src = c.before.residual_map; $('clResA').src = c.after.residual_map;
+    $('dlClean').href = c.cleaned;
+    $('clearRes').className = 'text-sm mono mb-3 ' + (c.cleared ? 'text-emerald-300' : 'text-amber-300');
+    $('clearRes').textContent = c.changed ? t('an.clearRes', {v0: t('v.' + c.before.verdict), s0: c.before.score, v1: t('v.' + c.after.verdict), s1: c.after.score,
+      psnr: c.psnr_db, ssim: c.ssim, a: c.strength, ber: c.lsb_ber}) : t('an.notNeeded');
+    $('clearNote').textContent = t('an.clearNote', {d: c.detector});
+  }
+  $('clearBtn').onclick = async () => {
+    if (!file) return;
+    const btn = $('clearBtn'); btn.disabled = true; btn.textContent = t('an.clearing');
+    const fd = new FormData(); fd.append('image', file); fd.append('domain', $('domain').value);
+    try {
+      const r = await NSN.fetch('/api/sanitize', {method: 'POST', body: fd});
+      const d = await r.json(); if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+      lastClear = d; renderClear(); $('clearSec').scrollIntoView({behavior: 'smooth', block: 'start'});
+    } catch (e) { $('err').textContent = t('an.err', {m: e.message}); }
+    finally { btn.disabled = false; btn.textContent = t('an.clearBtn'); }
+  };
+  function addEvents(d) {
+    const log = $('log');
+    const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 30;
+    d.events.forEach(e => {
+      lastId = Math.max(lastId, e.id); events.push(e);
+      const div = document.createElement('div'); div.innerHTML = evHtml(e); log.appendChild(div);
+    });
+    while (events.length > 300) events.shift();
+    while (log.children.length > 300) log.removeChild(log.firstChild);
+    if (atBottom) log.scrollTop = log.scrollHeight;
+  }
+  window.addEventListener('langchange', () => {
+    renderLayers(); renderLog(); renderTiles(lastD); renderClear(); if (lastD) { drawCharts(lastD); $('verdict').textContent = t('v.' + lastD.verdict); }
+    if (!$('run').disabled || !file) $('runTxt').textContent = t('an.run');
+  });
+  poll(); setInterval(poll, 2000);
+})();
+</script>
+<div class="fixed bottom-0 inset-x-0 z-40 text-center text-[11px] text-slate-400 bg-slate-950/85 border-t border-slate-800 py-1 px-2 pointer-events-none" data-i18n="static.note"></div>
+</body>
+</html>
